@@ -7,7 +7,7 @@ import urllib.parse
 
 # this is the function you should call with the url to get all data sorted as a object in the return
 def get_server_info(url):
-    if url.endswith(".pls") or url.endswith("listen.pls?sid=1"):
+    if urllib.parse.urlparse(url).path.endswith(".pls"):
         address = check_pls(url)
     else:
         address = url
@@ -29,11 +29,13 @@ def get_all_data(address):
     try:
         response = urllib.request.urlopen(request, timeout=6)
         headers = dict(response.info())
+        # Headers are case-insensitive
+        headers = {key.lower(): value for key, value in headers.items()}
 
         if "server" in headers:
             shoutcast = headers["server"]
-        elif "X-Powered-By" in headers:
-            shoutcast = headers["X-Powered-By"]
+        elif "x-powered-by" in headers:
+            shoutcast = headers["x-powered-by"]
         elif "icy-notice1" in headers:
             shoutcast = headers["icy-notice2"]
         else:
@@ -99,22 +101,26 @@ def shoutcast_check(response, headers, is_old):
     else:
         icy_metaint_header = None
 
-    if "Content-Type" in headers:
-        contenttype = headers["Content-Type"].rstrip()
-    elif "content-type" in headers:
+    if "content-type" in headers:
         contenttype = headers["content-type"].rstrip()
+    else:
+        contenttype = None
 
     if icy_metaint_header:
         metaint = int(icy_metaint_header)
-        read_buffer = metaint + 255
+        # Maximum metadata frame size is 255*16=4080
+        # Total buffer = music frame (metaint) + 1 byte (metadata length) + 4080 (255*16)
+        read_buffer = metaint + 4081
         content = response.read(read_buffer)
+        # Metadata true end is music frame + 1 byte + 16 * first byte after music frame
+        metadata_end = metaint + 1 + int.from_bytes(content[metaint:metaint+1]) * 16
 
         start = "StreamTitle='"
         end = "';"
 
         try:
             title = (
-                re.search(bytes("%s(.*)%s" % (start, end), "utf-8"), content[metaint:])
+                re.search(bytes("%s(.*)%s" % (start, end), "utf-8"), content[metaint+1:metadata_end])
                 .group(1)
                 .decode("utf-8")
             )
@@ -128,7 +134,7 @@ def shoutcast_check(response, headers, is_old):
             title.rstrip()
         except Exception as err:
             print(("songtitle error: " + str(err)))
-            title = content[metaint:].split(b"'")[1]
+            title = content[metaint+1:metadata_end].split(b"'")[1]
 
         return {"song": title, "bitrate": bitrate, "contenttype": contenttype}
     else:
