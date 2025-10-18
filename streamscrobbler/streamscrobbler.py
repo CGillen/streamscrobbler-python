@@ -115,23 +115,21 @@ def shoutcast_check(response, headers, is_old):
         # Metadata true end is music frame + 1 byte + 16 * first byte after music frame
         metadata_end = metaint + 1 + int.from_bytes(content[metaint:metaint+1]) * 16
 
-        start = "StreamTitle='"
-        end = "';"
+        end = ";"
 
         try:
-            title = (
-                re.search(bytes("%s(.*)%s" % (start, end), "utf-8"), content[metaint+1:metadata_end])
+            raw_metadata = (
+                re.search(bytes("(.*)%s" % (end), "utf-8"), content[metaint+1:metadata_end])
                 .group(1)
                 .decode("utf-8")
             )
-            title = (
-                re.sub("StreamUrl='.*?';", "", title)
-                .replace("';", "")
-                .replace("StreamUrl='", "")
-            )
-            title = re.sub("&artist=.*", "", title)
-            title = re.sub("http://.*", "", title)
-            title.rstrip()
+
+            metadata = {}
+            for meta in raw_metadata.split(';'):
+                meta = meta.strip().split('=')
+                metadata[meta[0]] = meta[1].strip("'")
+
+            title = metadata['StreamTitle']
         except Exception as err:
             print(("songtitle error: " + str(err)))
             title = content[metaint+1:metadata_end].split(b"'")[1]
