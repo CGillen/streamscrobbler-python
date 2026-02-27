@@ -9,7 +9,7 @@ import urllib.parse
 # this is the function you should call with the url to get all data sorted as a object in the return
 # `verify` controls TLS certificate validation (default True). callers can pass False to disable
 # verification when connecting to servers with self-signed/expired certs.
-def get_server_info(url, tls_verify=True):
+def get_server_info(url, tls_verify: bool = True):
     if urllib.parse.urlparse(url).path.endswith(".pls"):
         address = check_pls(url, tls_verify=tls_verify)
     else:
@@ -22,7 +22,7 @@ def get_server_info(url, tls_verify=True):
     return meta_interval
 
 
-def get_all_data(address, tls_verify=True):
+def get_all_data(address, tls_verify: bool = True):
     status = 0
 
     request = urllib.request.Request(address)
@@ -76,7 +76,7 @@ def get_all_data(address, tls_verify=True):
         return {"status": status, "metadata": None}
 
 
-def check_pls(address, tls_verify=True):
+def check_pls(address, tls_verify: bool =  True):
     try:
         stream = None
         # handle optional TLS verification
