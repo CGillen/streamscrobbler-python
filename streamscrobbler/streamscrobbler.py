@@ -11,11 +11,11 @@ import urllib.parse
 # verification when connecting to servers with self-signed/expired certs.
 def get_server_info(url, tls_verify=True):
     if urllib.parse.urlparse(url).path.endswith(".pls"):
-        address = check_pls(url, verify=tls_verify)
+        address = check_pls(url, tls_verify=tls_verify)
     else:
         address = url
     if isinstance(address, str):
-        meta_interval = get_all_data(address, verify=tls_verify)
+        meta_interval = get_all_data(address, tls_verify=tls_verify)
     else:
         meta_interval = {"status": 0, "metadata": None}
 
