@@ -32,7 +32,7 @@ from streamscrobbler import streamscrobbler
 ##streamurl can be a url directly to the stream or to a pls file
 streamurl = "http://somafm.com/seventies.pls"
 # by default, TLS certificates are verified; pass verify=False to disable validation
-stationinfo = streamscrobbler.get_server_info(streamurl, True/false)
+stationinfo = streamscrobbler.get_server_info(streamurl, True/False)
 ##metadata is the bitrate and current song
 metadata = stationinfo["metadata"]
 ```
