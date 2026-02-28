@@ -1,33 +1,42 @@
 # -*- coding: utf-8 -*-
 import re
+import ssl
 import urllib.request
 import urllib.error
 import urllib.parse
 
 
 # this is the function you should call with the url to get all data sorted as a object in the return
-def get_server_info(url):
+# verification when connecting to servers with self-signed/expired certs.
+def get_server_info(url, TLS_VERIFY: bool = True):
     if urllib.parse.urlparse(url).path.endswith(".pls"):
-        address = check_pls(url)
+        address = check_pls(url, TLS_VERIFY)
     else:
         address = url
     if isinstance(address, str):
-        meta_interval = get_all_data(address)
+        meta_interval = get_all_data(address, TLS_VERIFY)
     else:
         meta_interval = {"status": 0, "metadata": None}
 
     return meta_interval
 
 
-def get_all_data(address):
+def get_all_data(address, TLS_VERIFY: bool = True):
     status = 0
+
+    ctx = ssl.create_default_context()
+    if not TLS_VERIFY:
+        ctx = ssl._create_unverified_context()
+        ctx.check_hostname = False
+        ctx.set_ciphers("DEFAULT@SECLEVEL=1")
 
     request = urllib.request.Request(address)
     user_agent = "iTunes/9.1.1"
     request.add_header("User-Agent", user_agent)
     request.add_header("icy-metadata", 1)
+    
     try:
-        response = urllib.request.urlopen(request, timeout=6)
+        response = urllib.request.urlopen(request, timeout=6, context=ctx)
         headers = dict(response.info())
         # Headers are case-insensitive
         headers = {key.lower(): value for key, value in headers.items()}
@@ -68,10 +77,17 @@ def get_all_data(address):
         return {"status": status, "metadata": None}
 
 
-def check_pls(address):
+def check_pls(address, TLS_VERIFY: bool =  True):
     try:
         stream = None
-        response = urllib.request.urlopen(address, timeout=2)
+        # handle optional TLS verification
+        ctx = ssl.create_default_context()
+        if not TLS_VERIFY:
+            ctx = ssl._create_unverified_context()
+            ctx.check_hostname = False
+            ctx.set_ciphers("DEFAULT@SECLEVEL=1")
+
+        response = urllib.request.urlopen(address, timeout=2, context=ctx)
         for line in response:
             if line.startswith(b"File1="):
                 stream = line.decode()
